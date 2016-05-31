@@ -3,5 +3,29 @@ name = "infuse"
 version = "0.1.0"
 authors = ["Sébastien Lerique <sl@mehho.net>"]
 
+[lib]
+name = "infuse"
+path = "src/lib.rs"
+
+[[bin]]
+name = "infuser"
+path = "src/main.rs"
+
 [dependencies]
-iron = "*"
+iron = "0.3.0"
+router = "0.1.1"
+params = "0.2.2"
+logger = "0.0.3"
+bodyparser = "0.3.0"
+mount = "0.1.0"
+staticfile = "0.2.0"
+urlencoded = "0.3.0"
+persistent = "0.1.0"
+cookie = "0.2.4"
+jsonway = "1.0.0"
+queryst = "1.0.0"
+valico = "1.0.0"
+diesel = "0.6.2"
+diesel_codegen = { version = "0.6.2", default-features = false, features = ["nightly", "postgres"] }
+dotenv = "0.8.0"
+dotenv_macros = "0.8.0"
