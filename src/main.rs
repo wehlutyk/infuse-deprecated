@@ -6,7 +6,7 @@ extern crate logger;
 
 use iron::prelude::*;
 use logger::Logger;
-use infuse::views::handler;
+use infuse::views;
 
 // 3 endpoints:
 // - /process: send a pdf to process, get link to job
@@ -14,7 +14,8 @@ use infuse::views::handler;
 // - /documents/:id: get processed documents
 
 fn main() {
-    let router = router!(get "/" => handler);
+    let router = router!(get "/documents" => views::documents_handler,
+                         get "/documents/:id" => views::document_handler);
     let (logger_before, logger_after) = Logger::new(None);
 
     let mut chain = Chain::new(router);
