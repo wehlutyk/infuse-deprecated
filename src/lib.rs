@@ -2,10 +2,15 @@
 #![plugin(diesel_codegen, dotenv_macros)]
 
 extern crate iron;
-#[macro_use] extern crate router;
-#[macro_use] extern crate diesel;
+#[macro_use]
+extern crate router;
+#[macro_use]
+extern crate diesel;
+extern crate persistent;
 extern crate logger;
 extern crate dotenv;
+extern crate r2d2;
+extern crate r2d2_diesel;
 
 pub mod schema;
 pub mod models;
@@ -14,32 +19,46 @@ pub mod views;
 use iron::prelude::*;
 use iron::error::HttpResult;
 use iron::Listening;
-use diesel::prelude::*;
+use iron::typemap::Key;
 use diesel::pg::PgConnection;
+use persistent::Read;
+use r2d2_diesel::ConnectionManager;
 use logger::Logger;
 use dotenv::dotenv;
 use std::env;
 
-pub fn establish_connection() -> PgConnection {
-    dotenv().ok();
+pub type Pool = r2d2::Pool<ConnectionManager<PgConnection>>;
+pub type PooledConnection = r2d2::PooledConnection<ConnectionManager<PgConnection>>;
+pub struct Database;
+impl Key for Database {
+    type Value = Pool;
+}
 
-    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    PgConnection::establish(&database_url).expect(&format!("Error connecting to {}", database_url))
+fn get_pool_connection(req: &mut Request) -> PooledConnection {
+    let pool = req.get::<Read<Database>>().ok().expect("Database component not initialised");
+    pool.get().unwrap()
 }
 
 pub struct Infuse {
-    pub server: Iron<Chain>,
+    server: Iron<Chain>,
 }
 
 impl Infuse {
     pub fn new() -> Infuse {
+        dotenv().ok();
+
+        let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+        let manager = ConnectionManager::<PgConnection>::new(database_url);
+        let config = r2d2::Config::default();
+        let pool = r2d2::Pool::new(config, manager).expect("Failed to create connection pool");
+
         let router = router!(get "/documents" => views::documents_handler,
                              get "/documents/:id" => views::document_handler);
-        let (logger_before, logger_after) = Logger::new(None);
+        let logger = Logger::new(None);
 
         let mut chain = Chain::new(router);
-        chain.link_before(logger_before);
-        chain.link_after(logger_after);
+        chain.link(logger);
+        chain.link(Read::<Database>::both(pool));
 
         Infuse { server: Iron::new(chain) }
     }
