@@ -1,5 +1,4 @@
 CREATE TABLE documents (
   id SERIAL PRIMARY KEY,
-  sha VARCHAR NOT NULL,
   tei TEXT NOT NULL
 )

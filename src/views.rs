@@ -61,9 +61,8 @@ pub fn documents_handler(req: &mut Request) -> IronResult<Response> {
 
     let mut response = format!("Displaying {} documents", results.len());
     for document in results {
-        response.push_str(&format!("{}", document.sha));
-        response.push_str(&format!("----------\n"));
         response.push_str(&format!("{}", document.tei));
+        response.push_str(&format!("----------\n"));
     }
 
     Ok(Response::with((status::Ok, response)))
@@ -82,9 +81,8 @@ pub fn document_handler(req: &mut Request) -> IronResult<Response> {
     // that.
     match documents.find(id).first::<Document>(&*connection) {
         Ok(document) => {
-            let mut response = format!("{}", document.sha);
+            let mut response = format!("{}", document.tei);
             response.push_str(&format!("----------\n"));
-            response.push_str(&format!("{}", document.tei));
             Ok(Response::with((status::Ok, response)))
         }
         Err(DieselNotFound) => Ok(Response::with(status::NotFound)),

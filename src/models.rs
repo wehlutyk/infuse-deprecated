@@ -5,13 +5,11 @@ use diesel::prelude::*;
 #[has_many(jobs)]
 pub struct Document {
     pub id: i32,
-    pub sha: String,
     pub tei: String,
 }
 
 #[insertable_into(documents)]
 pub struct NewDocument<'a> {
-    pub sha: &'a str,
     pub tei: &'a str,
 }
 
