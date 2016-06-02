@@ -52,7 +52,9 @@ impl Infuse {
         let config = r2d2::Config::default();
         let pool = r2d2::Pool::new(config, manager).expect("Failed to create connection pool");
 
-        let router = router!(get "/documents" => views::documents_handler,
+        let router = router!(get "/jobs" => views::jobs_handler,
+                             get "/jobs/:id" => views::job_handler,
+                             get "/documents" => views::documents_handler,
                              get "/documents/:id" => views::document_handler);
         let logger = Logger::new(None);
 
