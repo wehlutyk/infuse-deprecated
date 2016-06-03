@@ -20,8 +20,8 @@ pub fn jobs_handler(req: &mut Request) -> IronResult<Response> {
 
     let mut response = format!("Displaying {} jobs", results.len());
     for job in results {
-        response.push_str(&format!("{}", job.sha));
-        response.push_str(&format!("----------\n"));
+        response.push_str(&job.sha);
+        response.push_str("\n----------\n");
     }
 
     Ok(Response::with((status::Ok, response)))
@@ -30,7 +30,7 @@ pub fn jobs_handler(req: &mut Request) -> IronResult<Response> {
 pub fn job_handler(req: &mut Request) -> IronResult<Response> {
     use schema::jobs::dsl::jobs;
 
-    let id = match get_router_param(&req, "id").parse::<i32>() {
+    let id = match get_router_param(req, "id").parse::<i32>() {
         Ok(id) => id,
         Err(ParseIntError { .. }) => return Ok(Response::with(status::NotFound)),
     };
@@ -39,17 +39,13 @@ pub fn job_handler(req: &mut Request) -> IronResult<Response> {
     // FIXME: Why is &* necessary? I thought Deref coercion was supposed to solve
     // that.
     match jobs.find(id).first::<Job>(&*connection) {
-        Ok(job) => {
-            let mut response = format!("{}", job.sha);
-            response.push_str(&format!("----------\n"));
-            Ok(Response::with((status::Ok, response)))
-        }
+        Ok(job) => Ok(Response::with((status::Ok, job.sha + "\n----------"))),
         Err(DieselNotFound) => Ok(Response::with(status::NotFound)),
         Err(err) => panic!(err),
     }
 }
 
-pub fn new_job_handler(req: &mut Request) -> IronResult<Response> {
+pub fn new_job_handler(_: &mut Request) -> IronResult<Response> {
     Ok(Response::with(status::Ok))
 }
 
@@ -65,8 +61,8 @@ pub fn documents_handler(req: &mut Request) -> IronResult<Response> {
 
     let mut response = format!("Displaying {} documents", results.len());
     for document in results {
-        response.push_str(&format!("{}", document.tei));
-        response.push_str(&format!("----------\n"));
+        response.push_str(&document.tei);
+        response.push_str("\n----------\n");
     }
 
     Ok(Response::with((status::Ok, response)))
@@ -75,7 +71,7 @@ pub fn documents_handler(req: &mut Request) -> IronResult<Response> {
 pub fn document_handler(req: &mut Request) -> IronResult<Response> {
     use schema::documents::dsl::documents;
 
-    let id = match get_router_param(&req, "id").parse::<i32>() {
+    let id = match get_router_param(req, "id").parse::<i32>() {
         Ok(id) => id,
         Err(ParseIntError { .. }) => return Ok(Response::with(status::NotFound)),
     };
@@ -84,11 +80,7 @@ pub fn document_handler(req: &mut Request) -> IronResult<Response> {
     // FIXME: Why is &* necessary? I thought Deref coercion was supposed to solve
     // that.
     match documents.find(id).first::<Document>(&*connection) {
-        Ok(document) => {
-            let mut response = format!("{}", document.tei);
-            response.push_str(&format!("----------\n"));
-            Ok(Response::with((status::Ok, response)))
-        }
+        Ok(document) => Ok(Response::with((status::Ok, document.tei + "\n----------"))),
         Err(DieselNotFound) => Ok(Response::with(status::NotFound)),
         Err(err) => panic!(err),
     }

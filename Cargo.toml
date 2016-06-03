@@ -12,6 +12,7 @@ name = "infuser"
 path = "src/main.rs"
 
 [dependencies]
+clippy = "*"
 iron = "0.3.0"
 router = "0.1.1"
 params = "0.2.2"

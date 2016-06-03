@@ -1,5 +1,6 @@
 #![feature(custom_derive, custom_attribute, plugin)]
-#![plugin(diesel_codegen, dotenv_macros)]
+
+#![plugin(diesel_codegen, dotenv_macros, clippy)]
 
 extern crate iron;
 #[macro_use]
@@ -49,8 +50,8 @@ pub struct Infuse {
     server: Iron<Chain>,
 }
 
-impl Infuse {
-    pub fn new() -> Infuse {
+impl Default for Infuse {
+    fn default() -> Infuse {
         dotenv().ok();
 
         let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
@@ -71,7 +72,9 @@ impl Infuse {
 
         Infuse { server: Iron::new(chain) }
     }
+}
 
+impl Infuse {
     pub fn serve(self) -> HttpResult<Listening> {
         self.server.http("localhost:3000")
     }

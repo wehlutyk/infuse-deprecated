@@ -1,7 +1,11 @@
+#![feature(plugin)]
+
+#![plugin(clippy)]
+
 extern crate infuse;
 
 use infuse::Infuse;
 
 fn main() {
-    Infuse::new().serve().unwrap();
+    Infuse::default().serve().unwrap();
 }
