@@ -7,6 +7,7 @@ extern crate router;
 #[macro_use]
 extern crate diesel;
 extern crate persistent;
+extern crate params;
 extern crate logger;
 extern crate dotenv;
 extern crate r2d2;
@@ -34,8 +35,8 @@ impl Key for Database {
     type Value = Pool;
 }
 
-fn get_pool_connection(req: &mut Request) -> PooledConnection {
-    let pool = req.get::<Read<Database>>().ok().expect("Database component not initialised");
+fn get_pool_connection(req: &Request) -> PooledConnection {
+    let pool = req.extensions.get::<Read<Database>>().expect("Database component not initialised");
     pool.get().unwrap()
 }
 
@@ -53,6 +54,7 @@ impl Infuse {
         let pool = r2d2::Pool::new(config, manager).expect("Failed to create connection pool");
 
         let router = router!(get "/jobs" => views::jobs_handler,
+                             post "/jobs/new" => views::new_job_handler,
                              get "/jobs/:id" => views::job_handler,
                              get "/documents" => views::documents_handler,
                              get "/documents/:id" => views::document_handler);
