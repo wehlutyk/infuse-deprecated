@@ -1,8 +1,8 @@
 use iron::prelude::*;
 use iron::status;
-use router::Router;
 
 use get_pool_connection;
+use get_router_param;
 use models::*;
 use diesel::prelude::*;
 use diesel::result::Error::NotFound as DieselNotFound;
@@ -30,7 +30,7 @@ pub fn jobs_handler(req: &mut Request) -> IronResult<Response> {
 pub fn job_handler(req: &mut Request) -> IronResult<Response> {
     use schema::jobs::dsl::jobs;
 
-    let id = match req.extensions.get::<Router>().unwrap().find("id").unwrap().parse::<i32>() {
+    let id = match get_router_param(&req, "id").parse::<i32>() {
         Ok(id) => id,
         Err(ParseIntError { .. }) => return Ok(Response::with(status::NotFound)),
     };
@@ -47,6 +47,10 @@ pub fn job_handler(req: &mut Request) -> IronResult<Response> {
         Err(DieselNotFound) => Ok(Response::with(status::NotFound)),
         Err(err) => panic!(err),
     }
+}
+
+pub fn new_job_handler(req: &mut Request) -> IronResult<Response> {
+    Ok(Response::with(status::Ok))
 }
 
 pub fn documents_handler(req: &mut Request) -> IronResult<Response> {
@@ -71,7 +75,7 @@ pub fn documents_handler(req: &mut Request) -> IronResult<Response> {
 pub fn document_handler(req: &mut Request) -> IronResult<Response> {
     use schema::documents::dsl::documents;
 
-    let id = match req.extensions.get::<Router>().unwrap().find("id").unwrap().parse::<i32>() {
+    let id = match get_router_param(&req, "id").parse::<i32>() {
         Ok(id) => id,
         Err(ParseIntError { .. }) => return Ok(Response::with(status::NotFound)),
     };

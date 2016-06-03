@@ -21,6 +21,7 @@ use iron::prelude::*;
 use iron::error::HttpResult;
 use iron::Listening;
 use iron::typemap::Key;
+use router::Router;
 use diesel::pg::PgConnection;
 use persistent::Read;
 use r2d2_diesel::ConnectionManager;
@@ -38,6 +39,10 @@ impl Key for Database {
 fn get_pool_connection(req: &Request) -> PooledConnection {
     let pool = req.extensions.get::<Read<Database>>().expect("Database component not initialised");
     pool.get().unwrap()
+}
+
+fn get_router_param<'a>(req: &'a Request, name: &str) -> &'a str {
+    req.extensions.get::<Router>().unwrap().find(name).unwrap()
 }
 
 pub struct Infuse {
