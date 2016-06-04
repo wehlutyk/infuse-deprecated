@@ -12,8 +12,6 @@ pub fn jobs_handler(req: &mut Request) -> IronResult<Response> {
     use schema::jobs::dsl::jobs;
 
     let connection = get_pool_connection(req);
-    // FIXME: Why is &* necessary? I thought Deref coercion was supposed to solve
-    // that.
     let results = jobs.limit(5)
         .load::<Job>(&*connection)
         .expect("Error loading jobs");
@@ -36,8 +34,6 @@ pub fn job_handler(req: &mut Request) -> IronResult<Response> {
     };
 
     let connection = get_pool_connection(req);
-    // FIXME: Why is &* necessary? I thought Deref coercion was supposed to solve
-    // that.
     match jobs.find(id).first::<Job>(&*connection) {
         Ok(job) => Ok(Response::with((status::Ok, job.sha + "\n----------"))),
         Err(DieselNotFound) => Ok(Response::with(status::NotFound)),
@@ -53,8 +49,6 @@ pub fn documents_handler(req: &mut Request) -> IronResult<Response> {
     use schema::documents::dsl::documents;
 
     let connection = get_pool_connection(req);
-    // FIXME: Why is &* necessary? I thought Deref coercion was supposed to solve
-    // that.
     let results = documents.limit(5)
         .load::<Document>(&*connection)
         .expect("Error loading documents");
@@ -77,8 +71,6 @@ pub fn document_handler(req: &mut Request) -> IronResult<Response> {
     };
 
     let connection = get_pool_connection(req);
-    // FIXME: Why is &* necessary? I thought Deref coercion was supposed to solve
-    // that.
     match documents.find(id).first::<Document>(&*connection) {
         Ok(document) => Ok(Response::with((status::Ok, document.tei + "\n----------"))),
         Err(DieselNotFound) => Ok(Response::with(status::NotFound)),
