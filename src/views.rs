@@ -1,5 +1,7 @@
 use iron::prelude::*;
 use iron::status;
+use iron::headers::Location;
+use iron::modifiers::Header;
 
 use get_pool_connection;
 use get_router_param;
@@ -41,10 +43,6 @@ pub fn job_handler(req: &mut Request) -> IronResult<Response> {
     }
 }
 
-pub fn new_job_handler(_: &mut Request) -> IronResult<Response> {
-    Ok(Response::with(status::Ok))
-}
-
 pub fn documents_handler(req: &mut Request) -> IronResult<Response> {
     use schema::documents::dsl::documents;
 
@@ -75,5 +73,17 @@ pub fn document_handler(req: &mut Request) -> IronResult<Response> {
         Ok(document) => Ok(Response::with((status::Ok, document.tei + "\n----------"))),
         Err(DieselNotFound) => Ok(Response::with(status::NotFound)),
         Err(err) => panic!(err),
+    }
+}
+
+pub fn new_document_handler(req: &mut Request) -> IronResult<Response> {
+    use params::{Params, Value};
+
+    if let Ok(map) = req.get_ref::<Params>() {
+        Ok(Response::with((status::Accepted,
+                           Header(Location("/jobs/FIXME".to_string())),
+                           map.keys().cloned().collect::<Vec<_>>().join("\n"))))
+    } else {
+        Ok(Response::with(status::BadRequest))
     }
 }

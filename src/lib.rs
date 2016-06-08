@@ -60,9 +60,9 @@ impl Default for Infuse {
         let pool = r2d2::Pool::new(config, manager).expect("Failed to create connection pool");
 
         let router = router!(get "/jobs" => views::jobs_handler,
-                             post "/jobs/new" => views::new_job_handler,
                              get "/jobs/:id" => views::job_handler,
                              get "/documents" => views::documents_handler,
+                             post "/documents" => views::new_document_handler,
                              get "/documents/:id" => views::document_handler);
         let logger = Logger::new(None);
 
