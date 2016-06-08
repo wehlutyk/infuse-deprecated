@@ -4,6 +4,7 @@
 use schema::{documents, jobs};
 use diesel::prelude::*;
 
+
 #[derive(Queryable)]
 #[has_many(jobs)]
 pub struct Document {

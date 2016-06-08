@@ -2,49 +2,31 @@
 
 #![plugin(diesel_codegen, dotenv_macros, clippy)]
 
-extern crate iron;
-#[macro_use]
-extern crate router;
 #[macro_use]
 extern crate diesel;
-extern crate persistent;
-extern crate params;
-extern crate logger;
 extern crate dotenv;
+extern crate iron;
+extern crate logger;
+extern crate params;
+extern crate persistent;
 extern crate r2d2;
 extern crate r2d2_diesel;
+#[macro_use]
+extern crate router;
 
-pub mod schema;
 pub mod models;
+pub mod schema;
+pub mod utils;
 pub mod views;
 
-use iron::prelude::*;
-use iron::error::HttpResult;
-use iron::Listening;
-use iron::typemap::Key;
-use router::Router;
 use diesel::pg::PgConnection;
-use persistent::Read;
-use r2d2_diesel::ConnectionManager;
-use logger::Logger;
 use dotenv::dotenv;
+use iron::error;
+use iron::prelude::*;
+use r2d2::{Config, Pool};
+use r2d2_diesel::ConnectionManager;
 use std::env;
 
-pub type Pool = r2d2::Pool<ConnectionManager<PgConnection>>;
-pub type PooledConnection = r2d2::PooledConnection<ConnectionManager<PgConnection>>;
-pub struct Database;
-impl Key for Database {
-    type Value = Pool;
-}
-
-fn get_pool_connection(req: &Request) -> PooledConnection {
-    let pool = req.extensions.get::<Read<Database>>().expect("Database component not initialised");
-    pool.get().unwrap()
-}
-
-fn get_router_param<'a>(req: &'a Request, name: &str) -> &'a str {
-    req.extensions.get::<Router>().unwrap().find(name).unwrap()
-}
 
 pub struct Infuse {
     server: Iron<Chain>,
@@ -56,26 +38,26 @@ impl Default for Infuse {
 
         let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
         let manager = ConnectionManager::<PgConnection>::new(database_url);
-        let config = r2d2::Config::default();
-        let pool = r2d2::Pool::new(config, manager).expect("Failed to create connection pool");
+        let config = Config::default();
+        let pool = Pool::new(config, manager).expect("Failed to create connection pool");
 
         let router = router!(get "/jobs" => views::jobs_handler,
                              get "/jobs/:id" => views::job_handler,
                              get "/documents" => views::documents_handler,
                              post "/documents" => views::new_document_handler,
                              get "/documents/:id" => views::document_handler);
-        let logger = Logger::new(None);
+        let logger = logger::Logger::new(None);
 
         let mut chain = Chain::new(router);
         chain.link(logger);
-        chain.link(Read::<Database>::both(pool));
+        chain.link(persistent::Read::<utils::Database>::both(pool));
 
         Infuse { server: Iron::new(chain) }
     }
 }
 
 impl Infuse {
-    pub fn serve(self) -> HttpResult<Listening> {
+    pub fn serve(self) -> error::HttpResult<iron::Listening> {
         self.server.http("localhost:3000")
     }
 }

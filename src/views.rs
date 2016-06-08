@@ -1,14 +1,15 @@
-use iron::prelude::*;
-use iron::status;
-use iron::headers::Location;
-use iron::modifiers::Header;
-
-use get_pool_connection;
-use get_router_param;
-use models::*;
 use diesel::prelude::*;
 use diesel::result::Error::NotFound as DieselNotFound;
+use iron::headers::Location;
+use iron::modifiers::Header;
+use iron::prelude::*;
+use iron::status;
+use params::Params;
 use std::num::ParseIntError;
+
+use models::{Document, Job};
+use utils::{get_pool_connection, get_router_param};
+
 
 pub fn jobs_handler(req: &mut Request) -> IronResult<Response> {
     use schema::jobs::dsl::jobs;
@@ -77,8 +78,6 @@ pub fn document_handler(req: &mut Request) -> IronResult<Response> {
 }
 
 pub fn new_document_handler(req: &mut Request) -> IronResult<Response> {
-    use params::{Params, Value};
-
     if let Ok(map) = req.get_ref::<Params>() {
         Ok(Response::with((status::Accepted,
                            Header(Location("/jobs/FIXME".to_string())),
