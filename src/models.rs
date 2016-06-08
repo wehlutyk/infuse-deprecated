@@ -1,8 +1,9 @@
 // Silence clippy's warn(clone_on_copy) because of #[belongs_to(document)]
 #![allow(clone_on_copy)]
 
-use schema::{documents, jobs};
 use diesel::prelude::*;
+
+use schema::{documents, jobs};
 
 
 #[derive(Queryable)]
