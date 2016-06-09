@@ -1,18 +1,27 @@
+// Silence some clippy warnings:
+// * warn(identity_op) because of #[derive(Serialize)]
+#![allow(identity_op)]
+
+use iron::headers::ContentType;
 use iron::modifier::Modifier;
 use iron::prelude::*;
-use serde_json::ser::{to_vec};
+use serde::Serialize;
+use serde_json::to_vec;
 
-use models::{Document, Job};
 
+pub struct SerializableResponse<T: Serialize>(pub T);
 
-impl Modifier<Response> for Document {
-    fn modify(self, res: &mut Response) {
-        to_vec(&self).unwrap().modify(res);
-    }
+#[derive(Serialize)]
+pub struct SerializableData<'a, T: 'a + Serialize> {
+    data: &'a T,
 }
 
-impl Modifier<Response> for Job {
-    fn modify(self, res: &mut Response) {
-        to_vec(&self).unwrap().modify(res);
+impl<T> Modifier<Response> for SerializableResponse<T> where T: Serialize {
+    fn modify(self, response: &mut Response) {
+        response.headers.set(ContentType::json());
+        let data = SerializableData { data: &self.0 };
+        to_vec(&data)
+            .expect("Could not serialize response data")
+            .modify(response);
     }
 }

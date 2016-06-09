@@ -1,3 +1,4 @@
+use diesel;
 use diesel::prelude::*;
 use diesel::result::Error::NotFound as DieselNotFound;
 use iron::headers::Location;
@@ -7,7 +8,8 @@ use iron::status;
 use params::Params;
 use std::num::ParseIntError;
 
-use models::{Document, Job};
+use models::{Document, Job, NewJob};
+use serializers::SerializableResponse;
 use utils::{get_pool_connection, get_router_param};
 
 
@@ -19,13 +21,7 @@ pub fn jobs_handler(req: &mut Request) -> IronResult<Response> {
         .load::<Job>(&*connection)
         .expect("Error loading jobs");
 
-    let mut response = format!("Displaying {} jobs", results.len());
-    for job in results {
-        response.push_str(&job.sha);
-        response.push_str("\n----------\n");
-    }
-
-    Ok(Response::with((status::Ok, response)))
+    Ok(Response::with((status::Ok, SerializableResponse(results))))
 }
 
 pub fn job_handler(req: &mut Request) -> IronResult<Response> {
@@ -38,7 +34,7 @@ pub fn job_handler(req: &mut Request) -> IronResult<Response> {
 
     let connection = get_pool_connection(req);
     match jobs.find(id).first::<Job>(&*connection) {
-        Ok(job) => Ok(Response::with((status::Ok, job))),
+        Ok(job) => Ok(Response::with((status::Ok, SerializableResponse(job)))),
         Err(DieselNotFound) => Ok(Response::with(status::NotFound)),
         Err(err) => panic!(err),
     }
@@ -52,13 +48,7 @@ pub fn documents_handler(req: &mut Request) -> IronResult<Response> {
         .load::<Document>(&*connection)
         .expect("Error loading documents");
 
-    let mut response = format!("Displaying {} documents", results.len());
-    for document in results {
-        response.push_str(&document.tei);
-        response.push_str("\n----------\n");
-    }
-
-    Ok(Response::with((status::Ok, response)))
+    Ok(Response::with((status::Ok, SerializableResponse(results))))
 }
 
 pub fn document_handler(req: &mut Request) -> IronResult<Response> {
@@ -71,17 +61,29 @@ pub fn document_handler(req: &mut Request) -> IronResult<Response> {
 
     let connection = get_pool_connection(req);
     match documents.find(id).first::<Document>(&*connection) {
-        Ok(document) => Ok(Response::with((status::Ok, document))),
+        Ok(document) => Ok(Response::with((status::Ok, SerializableResponse(document)))),
         Err(DieselNotFound) => Ok(Response::with(status::NotFound)),
         Err(err) => panic!(err),
     }
 }
 
 pub fn new_document_handler(req: &mut Request) -> IronResult<Response> {
+    use schema::jobs;
+
+    let connection = get_pool_connection(req);
     if let Ok(map) = req.get_ref::<Params>() {
+
+        let new_job = NewJob {
+            sha: "bla",
+        };
+
+        let job = diesel::insert(&new_job).into(jobs::table)
+            .get_result::<Job>(&*connection)
+            .expect("Error saving new job");
+
         Ok(Response::with((status::Accepted,
-                           Header(Location("/jobs/FIXME".to_string())),
-                           map.keys().cloned().collect::<Vec<_>>().join("\n"))))
+                           Header(Location(format!("/jobs/{}", job.id))),
+                           SerializableResponse(job))))
     } else {
         Ok(Response::with(status::BadRequest))
     }
