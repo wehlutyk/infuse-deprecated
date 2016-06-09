@@ -1,6 +1,5 @@
 #![feature(custom_derive, custom_attribute, plugin)]
-
-#![plugin(diesel_codegen, dotenv_macros, clippy)]
+#![plugin(diesel_codegen, dotenv_macros, clippy, serde_macros)]
 
 #[macro_use]
 extern crate diesel;
@@ -13,9 +12,12 @@ extern crate r2d2;
 extern crate r2d2_diesel;
 #[macro_use]
 extern crate router;
+extern crate serde;
+extern crate serde_json;
 
 pub mod models;
 pub mod schema;
+pub mod serializers;
 pub mod utils;
 pub mod views;
 

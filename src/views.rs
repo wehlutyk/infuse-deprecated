@@ -38,7 +38,7 @@ pub fn job_handler(req: &mut Request) -> IronResult<Response> {
 
     let connection = get_pool_connection(req);
     match jobs.find(id).first::<Job>(&*connection) {
-        Ok(job) => Ok(Response::with((status::Ok, job.sha + "\n----------"))),
+        Ok(job) => Ok(Response::with((status::Ok, job))),
         Err(DieselNotFound) => Ok(Response::with(status::NotFound)),
         Err(err) => panic!(err),
     }
@@ -71,7 +71,7 @@ pub fn document_handler(req: &mut Request) -> IronResult<Response> {
 
     let connection = get_pool_connection(req);
     match documents.find(id).first::<Document>(&*connection) {
-        Ok(document) => Ok(Response::with((status::Ok, document.tei + "\n----------"))),
+        Ok(document) => Ok(Response::with((status::Ok, document))),
         Err(DieselNotFound) => Ok(Response::with(status::NotFound)),
         Err(err) => panic!(err),
     }

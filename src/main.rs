@@ -1,5 +1,4 @@
 #![feature(plugin)]
-
 #![plugin(clippy)]
 
 extern crate infuse;
