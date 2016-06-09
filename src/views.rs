@@ -11,6 +11,7 @@ use params::{Params, Value};
 use std::io::Read;
 use std::num::ParseIntError;
 
+use files::save_file;
 use models::{Document, Job, NewJob};
 use serializers::SerializableResponse;
 use utils::{get_pool_connection, get_router_param};
@@ -98,7 +99,8 @@ pub fn new_document_handler(req: &mut Request) -> IronResult<Response> {
                 Err(err) => panic!(err),
             }
 
-            // TODO: store the file
+            // Store the file
+            save_file(&hash, &bytes);
 
             // Create the job.
             let new_job = NewJob {
