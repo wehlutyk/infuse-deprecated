@@ -1,3 +1,5 @@
+use crypto::sha3::Sha3;
+use crypto::digest::Digest;
 use diesel;
 use diesel::prelude::*;
 use diesel::result::Error::NotFound as DieselNotFound;
@@ -5,7 +7,8 @@ use iron::headers::Location;
 use iron::modifiers::Header;
 use iron::prelude::*;
 use iron::status;
-use params::Params;
+use params::{Params, Value};
+use std::io::Read;
 use std::num::ParseIntError;
 
 use models::{Document, Job, NewJob};
@@ -73,17 +76,45 @@ pub fn new_document_handler(req: &mut Request) -> IronResult<Response> {
     let connection = get_pool_connection(req);
     if let Ok(map) = req.get_ref::<Params>() {
 
-        let new_job = NewJob {
-            sha: "bla",
-        };
+        if let Some(&Value::File(ref pfile)) = map.find(&["file"]) {
+            // Read the file.
+            let mut file = pfile.open().expect("Couldn't open file");
+            let size = file.metadata().expect("Couldn't get file metadata").len();
+            let mut bytes = Vec::with_capacity(size as usize);
+            file.read_to_end(&mut bytes).unwrap();
 
-        let job = diesel::insert(&new_job).into(jobs::table)
-            .get_result::<Job>(&*connection)
-            .expect("Error saving new job");
+            // Compute its sha.
+            let mut hasher = Sha3::sha3_256();
+            hasher.input(&bytes);
+            let hash = hasher.result_str();
 
-        Ok(Response::with((status::Accepted,
-                           Header(Location(format!("/jobs/{}", job.id))),
-                           SerializableResponse(job))))
+            // See if we don't have the file already.
+            match jobs::table
+                .filter(jobs::columns::sha.eq(&hash))
+                .first::<Job>(&*connection) {
+                Ok(job) => return Ok(Response::with((status::Conflict,
+                                                     Header(Location(format!("/jobs/{}", job.id)))))),
+                Err(DieselNotFound) => (),
+                Err(err) => panic!(err),
+            }
+
+            // TODO: store the file
+
+            // Create the job.
+            let new_job = NewJob {
+                sha: &hash,
+            };
+            let job = diesel::insert(&new_job).into(jobs::table)
+                .get_result::<Job>(&*connection)
+                .expect("Error saving new job");
+
+            // TODO: actually launch the job
+
+            Ok(Response::with((status::Accepted,
+                               Header(Location(format!("/jobs/{}", job.id))))))
+        } else {
+            Ok(Response::with(status::BadRequest))
+        }
     } else {
         Ok(Response::with(status::BadRequest))
     }

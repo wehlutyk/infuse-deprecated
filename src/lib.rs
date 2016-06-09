@@ -1,6 +1,7 @@
 #![feature(custom_derive, custom_attribute, plugin)]
 #![plugin(diesel_codegen, dotenv_macros, clippy, serde_macros)]
 
+extern crate crypto;
 #[macro_use]
 extern crate diesel;
 extern crate dotenv;
