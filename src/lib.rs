@@ -27,9 +27,10 @@ use diesel::pg::PgConnection;
 use dotenv::dotenv;
 use iron::error;
 use iron::prelude::*;
-use r2d2::{Config, Pool};
+use r2d2::Config;
 use r2d2_diesel::ConnectionManager;
 use std::env;
+use utils::{Pool, Database};
 
 
 pub struct Infuse {
@@ -54,7 +55,7 @@ impl Default for Infuse {
 
         let mut chain = Chain::new(router);
         chain.link(logger);
-        chain.link(persistent::Read::<utils::Database>::both(pool));
+        chain.link_before(persistent::Read::<Database>::one(pool));
 
         Infuse { server: Iron::new(chain) }
     }
