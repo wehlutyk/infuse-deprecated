@@ -6,10 +6,12 @@ extern crate crypto;
 extern crate diesel;
 extern crate dotenv;
 extern crate env_logger;
+extern crate hyper;
 extern crate iron;
 #[macro_use]
 extern crate log;
 extern crate logger;
+extern crate multipart;
 extern crate params;
 extern crate persistent;
 extern crate r2d2;
@@ -81,7 +83,9 @@ impl Default for Infuse {
 
 impl Infuse {
     pub fn serve(self) -> error::HttpResult<iron::Listening> {
+        let port = env::var("INFUSE_PORT").expect("INFUSE_PORT must be set");
+        let address = "localhost:".to_string() + &port;
         self.processor.start();
-        self.server.http("localhost:3000")
+        self.server.http(&*address)
     }
 }

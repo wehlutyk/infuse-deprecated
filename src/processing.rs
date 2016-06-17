@@ -1,11 +1,16 @@
 use diesel;
 use diesel::prelude::*;
 use diesel::result::Error as DieselError;
+use hyper::client::Client;
+use hyper::error::Error as HyperError;
 use iron::typemap::Key;
+use multipart::client::lazy::Multipart;
+use std::env;
+use std::io::Read;
 use std::sync::mpsc::{channel, Sender, Receiver};
 use std::thread;
-use std::time::Duration;
 
+use files::build_file_path;
 use models::{Job, Document, NewDocument};
 use utils::Pool;
 
@@ -15,7 +20,7 @@ const MAX_WORKERS: i32 = 4;
 #[derive(Debug)]
 enum JobError {
     Diesel(DieselError),
-    GrobidError,
+    Hyper(HyperError),
 }
 
 #[derive(Debug)]
@@ -52,7 +57,11 @@ pub struct Processor {
 
 impl Processor {
     pub fn new(channel: ProcessorChannel, pool: Pool) -> Processor {
-        Processor { sender: channel.0, receiver: channel.1, pool: pool }
+        Processor {
+            sender: channel.0,
+            receiver: channel.1,
+            pool: pool,
+        }
     }
 
     pub fn start(self) {
@@ -138,9 +147,11 @@ impl Processor {
     fn start_job(&self, id: i32) {
         use schema::{jobs, documents};
 
+        let grobid_url = env::var("GROBID_URL").expect("GROBID_URL must be set") + "/processFulltextDocument";
         let connection = self.pool.get().unwrap();
         let sender = self.sender.clone();
 
+        // Get our job.
         let job = match diesel::update(jobs::table.find(id))
                 .set(jobs::columns::running.eq(true))
                 .get_result::<Job>(&*connection) {
@@ -152,14 +163,24 @@ impl Processor {
         };
 
         thread::spawn(move || {
-            // do the actual http handling
-            // - file:///home/sl/Code/infuse/target/doc/multipart/client/lazy/struct.Multipart.html
-            // - file:///home/sl/Code/infuse/target/doc/hyper/client/struct.Client.html
-            thread::sleep(Duration::new(5, 0));
-            let tei = format!("Came from job {}, hash {}", job.id, job.sha);
+            // Prepare the grobid request.
+            let client = Client::new();
+            let mut multipart = Multipart::new();
+            multipart.add_file("input", build_file_path(&job.sha));
+            let mut tei = String::new();
+
+            info!("sending request to {}", &grobid_url);
+            match multipart.client_request(&client, &grobid_url) {
+                Ok(mut response) => response.read_to_string(&mut tei).unwrap(),
+                Err(error) => {
+                    sender.send(Message::finish_job(id, Err(JobError::Hyper(error)))).unwrap();
+                    return;
+                }
+            };
 
             // TODO: check DOI uniqueness.
 
+            // Create the new document.
             let new_document = NewDocument { tei: &tei };
             let document = match diesel::insert(&new_document)
                     .into(documents::table)
@@ -171,6 +192,7 @@ impl Processor {
                 }
             };
 
+            // Update the finished job.
             match diesel::update(jobs::table.find(id))
                     .set((jobs::columns::running.eq(false), jobs::columns::document_id.eq(document.id)))
                     .execute(&*connection) {

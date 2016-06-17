@@ -22,7 +22,7 @@ fn create_folder(folder: &str) {
         .expect("Couldn't create containing folder for file");
 }
 
-fn build_file_path(hash: &str) -> PathBuf {
+pub fn build_file_path(hash: &str) -> PathBuf {
     // TODO: move this to server init
     let static_dir = env::var("STATIC_DIR").expect("STATIC_DIR must be set");
 
