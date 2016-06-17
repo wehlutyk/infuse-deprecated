@@ -104,7 +104,7 @@ pub fn new_document_handler(req: &mut Request) -> IronResult<Response> {
     match jobs::table
         .filter(jobs::columns::sha.eq(&hash))
         .first::<Job>(&*connection) {
-        Ok(job) => return Ok(Response::with((status::Conflict,
+        Ok(job) => return Ok(Response::with((status::SeeOther,
                                              Header(Location(format!("/jobs/{}", job.id)))))),
         Err(DieselNotFound) => (),
         Err(err) => panic!(err),
