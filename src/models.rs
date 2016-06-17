@@ -10,6 +10,8 @@ use std::marker::Sized;
 use schema::{documents, jobs};
 
 
+// TODO: do proper serialization depending on contents. E.g. a job has a status.
+
 trait SerializeWith {
     fn serialize_with<S: Serializer>(&self, serializer: &mut S) -> Result<(), S::Error>;
 }
@@ -44,6 +46,7 @@ pub struct Job {
     #[serde(serialize_with="SerializeWith::serialize_with")]
     pub id: i32,
     pub sha: String,
+    pub running: bool,
     pub document_id: Option<i32>,
 }
 
