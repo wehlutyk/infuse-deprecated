@@ -26,9 +26,11 @@ pub fn get_pool_connection(req: &Request) -> PooledConnection {
 }
 
 pub fn get_router_param<'a>(req: &'a Request, name: &str) -> &'a str {
-    req.extensions.get::<Router>()
+    req.extensions
+        .get::<Router>()
         .expect("Router component not initialised")
-        .find(name).unwrap()
+        .find(name)
+        .unwrap()
 }
 
 pub fn get_param<'a>(req: &'a mut Request, path: &[&str]) -> Option<&'a Value> {

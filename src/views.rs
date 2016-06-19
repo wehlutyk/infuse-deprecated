@@ -22,8 +22,7 @@ pub fn jobs_handler(req: &mut Request) -> IronResult<Response> {
     use schema::jobs;
 
     let connection = get_pool_connection(req);
-    let results = jobs::table
-        .load::<Job>(&*connection)
+    let results = jobs::table.load::<Job>(&*connection)
         .expect("Error loading jobs");
 
     Ok(Response::with((status::Ok, SerializableResponse(results))))
@@ -56,8 +55,7 @@ pub fn documents_handler(req: &mut Request) -> IronResult<Response> {
     use schema::documents;
 
     let connection = get_pool_connection(req);
-    let results = documents::table
-        .load::<Document>(&*connection)
+    let results = documents::table.load::<Document>(&*connection)
         .expect("Error loading documents");
 
     Ok(Response::with((status::Ok, SerializableResponse(results))))
@@ -91,7 +89,7 @@ pub fn new_document_handler(req: &mut Request) -> IronResult<Response> {
         bytes = Vec::with_capacity(size as usize);
         file.read_to_end(&mut bytes).unwrap();
     } else {
-        return Ok(Response::with(status::BadRequest))
+        return Ok(Response::with(status::BadRequest));
     }
 
     // Compute the file's sha.
@@ -101,11 +99,12 @@ pub fn new_document_handler(req: &mut Request) -> IronResult<Response> {
 
     // See if we don't have the file already.
     let connection = get_pool_connection(req);
-    match jobs::table
-        .filter(jobs::columns::sha.eq(&hash))
+    match jobs::table.filter(jobs::columns::sha.eq(&hash))
         .first::<Job>(&*connection) {
-        Ok(job) => return Ok(Response::with((status::SeeOther,
-                                             Header(Location(format!("/jobs/{}", job.id)))))),
+        Ok(job) => {
+            return Ok(Response::with((status::SeeOther,
+                                      Header(Location(format!("/jobs/{}", job.id))))))
+        }
         Err(DieselNotFound) => (),
         Err(err) => panic!(err),
     }
@@ -114,15 +113,13 @@ pub fn new_document_handler(req: &mut Request) -> IronResult<Response> {
     save_file(&hash, &bytes);
 
     // Create the job.
-    let new_job = NewJob {
-        sha: &hash,
-    };
-    let job = diesel::insert(&new_job).into(jobs::table)
+    let new_job = NewJob { sha: &hash };
+    let job = diesel::insert(&new_job)
+        .into(jobs::table)
         .get_result::<Job>(&*connection)
         .expect("Error saving new job");
     let processor_sender = get_processor_sender(req);
     processor_sender.send(Message::new_job(job.id)).unwrap();
 
-    Ok(Response::with((status::Accepted,
-                       Header(Location(format!("/jobs/{}", job.id))))))
+    Ok(Response::with((status::Accepted, Header(Location(format!("/jobs/{}", job.id))))))
 }

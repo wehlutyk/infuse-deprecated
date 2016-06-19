@@ -77,7 +77,10 @@ impl Default for Infuse {
         chain.link_before(persistent::Read::<Database>::one(pool));
         chain.link_before(persistent::Write::<Processor>::one(sender.clone()));
 
-        Infuse { server: Iron::new(chain), processor: processor }
+        Infuse {
+            server: Iron::new(chain),
+            processor: processor,
+        }
     }
 }
 

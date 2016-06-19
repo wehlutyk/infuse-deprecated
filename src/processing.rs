@@ -37,11 +37,17 @@ pub struct Message {
 
 impl Message {
     pub fn new_job(id: i32) -> Message {
-        Message { event: Event::New, job_id: id }
+        Message {
+            event: Event::New,
+            job_id: id,
+        }
     }
 
     fn finish_job(id: i32, result: Result<(), JobError>) -> Message {
-        Message { event: Event::Finish(result), job_id: id }
+        Message {
+            event: Event::Finish(result),
+            job_id: id,
+        }
     }
 }
 
@@ -77,16 +83,17 @@ impl Processor {
             info!("resetting {} jobs to non-running state", running_count);
             diesel::update(running_jobs)
                 .set(jobs::columns::running.eq(false))
-                .execute(&*connection).unwrap();
+                .execute(&*connection)
+                .unwrap();
         }
 
         // Start as many jobs as we can.
-        let init_job_ids = jobs::table
-            .filter(jobs::columns::document_id.is_null())
+        let init_job_ids = jobs::table.filter(jobs::columns::document_id.is_null())
             .order(jobs::columns::id.asc())
             .limit(MAX_WORKERS as i64)
             .select(jobs::columns::id)
-            .load::<i32>(&*connection).unwrap();
+            .load::<i32>(&*connection)
+            .unwrap();
         for job_id in init_job_ids {
             self.sender.send(Message::new_job(job_id)).unwrap();
         }
@@ -132,12 +139,11 @@ impl Processor {
         use schema::jobs;
 
         let connection = self.pool.get().unwrap();
-        match jobs::table
-                .filter(jobs::columns::document_id.is_null())
-                .filter(jobs::columns::running.eq(false))
-                .order(jobs::columns::id.asc())
-                .select(jobs::columns::id)
-                .first::<i32>(&*connection) {
+        match jobs::table.filter(jobs::columns::document_id.is_null())
+            .filter(jobs::columns::running.eq(false))
+            .order(jobs::columns::id.asc())
+            .select(jobs::columns::id)
+            .first::<i32>(&*connection) {
             Ok(id) => Some(id),
             Err(DieselError::NotFound) => None,
             Err(err) => panic!(err),
@@ -147,14 +153,15 @@ impl Processor {
     fn start_job(&self, id: i32) {
         use schema::{jobs, documents};
 
-        let grobid_url = env::var("GROBID_URL").expect("GROBID_URL must be set") + "/processFulltextDocument";
+        let grobid_url = env::var("GROBID_URL").expect("GROBID_URL must be set") +
+                         "/processFulltextDocument";
         let connection = self.pool.get().unwrap();
         let sender = self.sender.clone();
 
         // Get our job.
         let job = match diesel::update(jobs::table.find(id))
-                .set(jobs::columns::running.eq(true))
-                .get_result::<Job>(&*connection) {
+            .set(jobs::columns::running.eq(true))
+            .get_result::<Job>(&*connection) {
             Ok(job) => job,
             Err(error) => {
                 sender.send(Message::finish_job(id, Err(JobError::Diesel(error)))).unwrap();
@@ -183,8 +190,8 @@ impl Processor {
             // Create the new document.
             let new_document = NewDocument { tei: &tei };
             let document = match diesel::insert(&new_document)
-                    .into(documents::table)
-                    .get_result::<Document>(&*connection) {
+                .into(documents::table)
+                .get_result::<Document>(&*connection) {
                 Ok(document) => document,
                 Err(error) => {
                     sender.send(Message::finish_job(id, Err(JobError::Diesel(error)))).unwrap();
@@ -194,8 +201,9 @@ impl Processor {
 
             // Update the finished job.
             match diesel::update(jobs::table.find(id))
-                    .set((jobs::columns::running.eq(false), jobs::columns::document_id.eq(document.id)))
-                    .execute(&*connection) {
+                .set((jobs::columns::running.eq(false),
+                      jobs::columns::document_id.eq(document.id)))
+                .execute(&*connection) {
                 Ok(_) => sender.send(Message::finish_job(id, Ok(()))).unwrap(),
                 Err(error) => {
                     sender.send(Message::finish_job(id, Err(JobError::Diesel(error)))).unwrap();

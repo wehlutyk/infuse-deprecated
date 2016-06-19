@@ -16,7 +16,9 @@ pub struct SerializableData<'a, T: 'a + Serialize> {
     data: &'a T,
 }
 
-impl<T> Modifier<Response> for SerializableResponse<T> where T: Serialize {
+impl<T> Modifier<Response> for SerializableResponse<T>
+    where T: Serialize
+{
     fn modify(self, response: &mut Response) {
         response.headers.set(ContentType::json());
         let data = SerializableData { data: &self.0 };
