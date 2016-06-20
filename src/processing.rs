@@ -1,10 +1,12 @@
-use diesel;
 use diesel::prelude::*;
 use diesel::result::Error as DieselError;
-use hyper::client::Client;
+use diesel;
+use hyper::Url;
+use hyper::method::Method;
+use hyper::client::Request;
 use hyper::error::Error as HyperError;
 use iron::typemap::Key;
-use multipart::client::lazy::Multipart;
+use multipart::client::Multipart;
 use std::env;
 use std::io::Read;
 use std::sync::mpsc::{channel, Sender, Receiver};
@@ -153,8 +155,10 @@ impl Processor {
     fn start_job(&self, id: i32) {
         use schema::{jobs, documents};
 
-        let grobid_url = env::var("GROBID_URL").expect("GROBID_URL must be set") +
-                         "/processFulltextDocument";
+        let grobid_url = env::var("GROBID_URL").expect("GROBID_URL must be set");
+        let url: Url = (grobid_url + "/processFulltextDocument")
+            .parse()
+            .expect("Couldn't parse url");
         let connection = self.pool.get().unwrap();
         let sender = self.sender.clone();
 
@@ -171,13 +175,14 @@ impl Processor {
 
         thread::spawn(move || {
             // Prepare the grobid request.
-            let client = Client::new();
-            let mut multipart = Multipart::new();
-            multipart.add_file("input", build_file_path(&job.sha));
+            // TODO: use a connection pool.
+            info!("sending request to {}", &url);
+            let request = Request::new(Method::Post, url).unwrap();
+            let mut multipart = Multipart::from_request(request).unwrap();
+            multipart.write_file("input", build_file_path(&job.sha)).expect("Couldn't read file");
             let mut tei = String::new();
 
-            info!("sending request to {}", &grobid_url);
-            match multipart.client_request(&client, &grobid_url) {
+            match multipart.send() {
                 Ok(mut response) => response.read_to_string(&mut tei).unwrap(),
                 Err(error) => {
                     sender.send(Message::finish_job(id, Err(JobError::Hyper(error)))).unwrap();
@@ -185,7 +190,7 @@ impl Processor {
                 }
             };
 
-            // TODO: check DOI uniqueness.
+            // TODO: extract DOI, store in document and check uniqueness.
 
             // Create the new document.
             let new_document = NewDocument { tei: &tei };
